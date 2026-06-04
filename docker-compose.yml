@@ -1,0 +1,32 @@
+services:
+  # Go microservice
+  api:
+    build: .
+    container_name: immogucker_api
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      # Override the database URL to work within the Docker network
+      - DATABASE_URL=postgres://ig_user:ig_secret_password@immogucker_pg_db:5432/immogucker_db?sslmode=disable
+
+  db:
+    image: postgres:15-alpine
+    container_name: immogucker_pg_db
+    restart: always
+    environment:
+      POSTGRES_USER: ig_user
+      POSTGRES_PASSWORD: ig_secret_password
+      POSTGRES_DB: immogucker_db
+    ports:
+      # Host port (on your PC) : Container port (inside the container)
+      - "5435:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

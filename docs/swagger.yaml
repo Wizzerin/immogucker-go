@@ -1,0 +1,89 @@
+basePath: /api/v1
+definitions:
+  models.TaskRequest:
+    properties:
+      city:
+        type: string
+      email:
+        type: string
+      max_price:
+        type: integer
+    required:
+    - city
+    - email
+    - max_price
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Roman Mishyn
+  description: Asynchronous REST API for scraping real estate listings from WG-Gesucht.
+  title: Immogucker API
+  version: "1.0"
+paths:
+  /tasks:
+    post:
+      consumes:
+      - application/json
+      description: Adds a new asynchronous scraping task to the queue based on city
+        and max price.
+      parameters:
+      - description: Task parameters (e.g., city, max_price, email)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.TaskRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Task successfully added to queue
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid input data
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a parsing task
+      tags:
+      - Tasks
+  /tasks/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the current status of a parsing task and the list of
+        apartments if completed.
+      parameters:
+      - description: Task UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Task status and results
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Task not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get task status
+      tags:
+      - Tasks
+swagger: "2.0"
