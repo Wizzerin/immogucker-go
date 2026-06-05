@@ -29,26 +29,26 @@ import (
 // @host            localhost:8080
 // @BasePath        /api/v1
 func main() {
-	log.Println("Запуск сервиса Immogucker...")
+	log.Println("Starting Immogucker service...")
 
 	config.Load()
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		log.Fatal("Критическая ошибка: переменная DATABASE_URL не задана")
+		log.Fatal("Critical error: DATABASE_URL environment variable is not set")
 	}
 
 	db, err := repository.InitDB(dbURL)
 	if err != nil {
-		log.Fatalf("Критическая ошибка: %v", err)
+		log.Fatalf("Critical database error: %v", err)
 	}
 	defer db.Close()
 
-	// Создаем буферизованный канал на 100 задач
+	// Initialize a buffered channel for up to 100 tasks
 	taskChan := make(chan string, 100)
-	var wg sync.WaitGroup // Создаем WaitGroup
+	var wg sync.WaitGroup
 
-	// Запускаем Worker Pool (например, 3 параллельных воркера)
+	// Start the Worker Pool (e.g., 3 concurrent workers)
 	worker.StartPool(db, taskChan, 3, &wg)
 
 	apiDeps := &handlers.API{
@@ -56,18 +56,18 @@ func main() {
 		TaskChan: taskChan,
 	}
 
-	// 2. Настройка роутера Gin
+	// Configure Gin router
 	router := gin.Default()
 
-	// --- ВОТ ЭТА СТРОКА ВКЛЮЧАЕТ ИНТЕРФЕЙС SWAGGER ---
+	// --- ENABLE SWAGGER UI ---
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Группа маршрутов API
+	// API route group
 	api := router.Group("/api/v1")
 	{
 		api.POST("/tasks", apiDeps.CreateTask)
 		api.GET("/tasks/:id", apiDeps.GetTaskStatus)
-
+		api.GET("/health", apiDeps.HealthCheck)
 	}
 
 	srv := &http.Server{
@@ -75,32 +75,34 @@ func main() {
 		Handler: router,
 	}
 
+	// Run the server in a separate goroutine to avoid blocking the main thread
 	go func() {
-		log.Println("Сервер запущен на http://localhost:8080")
+		log.Println("Server is running on http://localhost:8080")
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Ошибка сервера: %v", err)
+			log.Fatalf("Server error: %v", err)
 		}
 	}()
 
-	// --- БЛОК GRACEFUL SHUTDOWN ---
+	// --- GRACEFUL SHUTDOWN BLOCK ---
 
-	// Создаем канал для прослушивания сигналов ОС (Ctrl+C, Docker stop
+	// Create a channel to listen for OS signals (Ctrl+C, Docker stop)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit // Блокируем main, пока не придет сигнал
+	<-quit // Block main thread until a signal is received
 
-	log.Println("Получен сигнал завершения. Начинаем Graceful Shutdown...")
+	log.Println("Shutdown signal received. Initiating Graceful Shutdown...")
 
+	// 1. Stop accepting new HTTP requests (allow 5 seconds to finish current ones)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Принудительное завершение сервера: %v", err)
+		log.Fatalf("Forced server shutdown: %v", err)
 	}
 
-	// 2. Закрываем канал задач. Это даст сигнал воркерам выйти из цикла 'for range'
-	log.Println("Закрываем очередь задач...")
+	// 2. Close the task channel to signal workers to exit the 'for range' loop
+	log.Println("Closing task queue...")
 	close(taskChan)
 	wg.Wait()
 
-	log.Println("Все воркеры завершили работу. Соединение с БД закрыто. Сервис остановлен.")
+	log.Println("All workers have finished. Database connection closed. Service stopped.")
 }

@@ -1,6 +1,6 @@
 basePath: /api/v1
 definitions:
-  models.TaskRequest:
+  github_com_Wizzerin_immogucker-go_internal_models.TaskRequest:
     properties:
       city:
         type: string
@@ -21,6 +21,21 @@ info:
   title: Immogucker API
   version: "1.0"
 paths:
+  /health:
+    get:
+      description: Get the health status of the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Server is up and running
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Show the status of server
+      tags:
+      - System
   /tasks:
     post:
       consumes:
@@ -33,7 +48,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/models.TaskRequest'
+          $ref: '#/definitions/github_com_Wizzerin_immogucker-go_internal_models.TaskRequest'
       produces:
       - application/json
       responses:

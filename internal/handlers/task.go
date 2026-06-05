@@ -91,3 +91,16 @@ func (api *API) GetTaskStatus(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+// HealthCheck godoc
+// @Summary      Show the status of server
+// @Description  Get the health status of the API
+// @Tags         System
+// @Produce      json
+// @Success      200 {object} map[string]string "Server is up and running"
+// @Router       /health [get]
+func (api *API) HealthCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status": "up",
+	})
+}

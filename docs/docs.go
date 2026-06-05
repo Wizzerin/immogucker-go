@@ -17,6 +17,29 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/health": {
+            "get": {
+                "description": "Get the health status of the API",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Show the status of server",
+                "responses": {
+                    "200": {
+                        "description": "Server is up and running",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/tasks": {
             "post": {
                 "description": "Adds a new asynchronous scraping task to the queue based on city and max price.",
@@ -37,7 +60,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.TaskRequest"
+                            "$ref": "#/definitions/github_com_Wizzerin_immogucker-go_internal_models.TaskRequest"
                         }
                     }
                 ],
@@ -114,7 +137,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "models.TaskRequest": {
+        "github_com_Wizzerin_immogucker-go_internal_models.TaskRequest": {
             "type": "object",
             "required": [
                 "city",
