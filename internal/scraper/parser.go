@@ -13,10 +13,12 @@ import (
 )
 
 var cityIDs = map[string]string{
-	"Neuss":      "224",
-	"Düsseldorf": "30",
-	"Köln":       "73",
-	"Berlin":     "8",
+	"Neuss":       "224",
+	"Düsseldorf":  "30",
+	"Duesseldorf": "30",
+	"Köln":        "73",
+	"Koeln":       "73",
+	"Berlin":      "8",
 }
 
 // extractDigits is a helper function that removes all non-numeric characters from a string
@@ -31,12 +33,27 @@ func extractDigits(s string) string {
 }
 
 // ParseWGGesucht scrapes real estate listings for a specific city and max price
-func ParseWGGesucht(city string, maxPrice int, taskID string) ([]models.Apartment, error) {
+func ParseWGGesucht(city string, minPrice, maxPrice int, taskID string) ([]models.Apartment, error) {
 	var apartments []models.Apartment
 
-	cityID, exists := cityIDs[city]
-	if !exists {
-		return nil, fmt.Errorf("city %s is not supported by the parser (unknown ID)", city)
+	var targetCityName string
+	var targetCityID string
+
+	if id, exists := cityIDs[city]; exists {
+		targetCityName = city
+		targetCityID = id
+	} else {
+		for name, id := range cityIDs {
+			if city == id {
+				targetCityName = name
+				targetCityID = id
+				break
+			}
+		}
+	}
+
+	if targetCityID == "" {
+		return nil, fmt.Errorf("city %s is not supported by the parser (unknown ID or Name)", city)
 	}
 
 	c := colly.NewCollector(
@@ -85,7 +102,7 @@ func ParseWGGesucht(city string, maxPrice int, taskID string) ([]models.Apartmen
 		}
 
 		// Filter results on the fly to save memory
-		if price > maxPrice {
+		if price < minPrice || price > maxPrice {
 			log.Printf("[Parser] Apartment filtered out by price (%d € > %d €): %s", price, maxPrice, title)
 			return
 		}
@@ -104,7 +121,7 @@ func ParseWGGesucht(city string, maxPrice int, taskID string) ([]models.Apartmen
 	})
 
 	// Build the target URL using the mapped city ID
-	searchURL := fmt.Sprintf("https://www.wg-gesucht.de/wohnungen-in-%s.%s.2.1.0.html?rent_types[0]=1&rent_types[1]=2", city, cityID)
+	searchURL := fmt.Sprintf("https://www.wg-gesucht.de/wohnungen-in-%s.%s.2.1.0.html?rent_types[0]=1&rent_types[1]=2", targetCityName, targetCityID)
 	log.Printf("[Parser] Starting data collection from URL: %s", searchURL)
 
 	err := c.Visit(searchURL)

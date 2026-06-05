@@ -43,7 +43,7 @@ func worker(id int, db *sql.DB, tasks <-chan string, wg *sync.WaitGroup) {
 		log.Printf("[Worker %d] Searching for apartments in %s up to %d €", id, taskData.City, taskData.MaxPrice)
 
 		// Execute the scraping process
-		results, err := scraper.ParseWGGesucht(taskData.City, taskData.MaxPrice, taskID)
+		results, err := scraper.ParseWGGesucht(taskData.City, taskData.MinPrice, taskData.MaxPrice, taskID)
 		if err != nil {
 			log.Printf("[Worker %d] Scraping failed: %v", id, err)
 			repository.UpdateTaskStatus(db, taskID, "failed")

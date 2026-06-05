@@ -29,7 +29,7 @@ func GenerateResults(apartments []models.Apartment) (*bytes.Buffer, error) {
 		row := i + 2
 		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), apt.Title)
 		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), apt.Price)
-		f.SetCellValue(sheet, fmt.Sprintf("C%d", row), "Open listing")
+		f.SetCellValue(sheet, fmt.Sprintf("C%d", row), apt.Link)
 
 		err := f.SetCellHyperLink(sheet, fmt.Sprintf("C%d", row), apt.Link, "External")
 		if err != nil {

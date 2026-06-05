@@ -12,11 +12,11 @@ func CreateTask(db *sql.DB, req models.TaskRequest) (string, error) {
 	var taskID string
 
 	query := `
-			INSERT INTO tasks (city, max_price, email, status)
-			VALUES ($1, $2, $3, 'pending')
+			INSERT INTO tasks (city, max_price, min_price, email, status)
+			VALUES ($1, $2, $3, $4, 'pending')
 			RETURNING id
 	`
-	err := db.QueryRow(query, req.City, req.MaxPrice, req.Email).Scan(&taskID)
+	err := db.QueryRow(query, req.City, req.MaxPrice, req.MinPrice, req.Email).Scan(&taskID)
 	if err != nil {
 		return "", fmt.Errorf("failed to insert task into database: %w", err)
 	}
@@ -38,8 +38,8 @@ func UpdateTaskStatus(db *sql.DB, taskID string, status string) error {
 func GetTaskByID(db *sql.DB, id string) (models.TaskRequest, error) {
 	var req models.TaskRequest
 
-	query := `SELECT city, max_price, email FROM tasks WHERE id = $1`
-	err := db.QueryRow(query, id).Scan(&req.City, &req.MaxPrice, &req.Email)
+	query := `SELECT city, max_price, min_price, email FROM tasks WHERE id = $1`
+	err := db.QueryRow(query, id).Scan(&req.City, &req.MaxPrice, &req.MinPrice, &req.Email)
 	if err != nil {
 		return req, fmt.Errorf("failed to retrieve task %s: %w", id, err)
 	}
