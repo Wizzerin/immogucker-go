@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 
+	"github.com/Wizzerin/immogucker-go/internal/models"
 	"github.com/Wizzerin/immogucker-go/internal/notifier"
 	"github.com/Wizzerin/immogucker-go/internal/repository"
 	"github.com/Wizzerin/immogucker-go/internal/scraper"
@@ -43,21 +44,32 @@ func worker(id int, db *sql.DB, tasks <-chan string, wg *sync.WaitGroup) {
 		log.Printf("[Worker %d] Searching for apartments in %s up to %d €", id, taskData.City, taskData.MaxPrice)
 
 		// Execute the scraping process
-		results, err := scraper.ParseWGGesucht(taskData.City, taskData.MinPrice, taskData.MaxPrice, taskID)
-		if err != nil {
-			log.Printf("[Worker %d] Scraping failed: %v", id, err)
-			repository.UpdateTaskStatus(db, taskID, "failed")
-			continue
+		providers := []scraper.Provider{scraper.ProviderWGGesucht, scraper.ProviderKleinanzeigen}
+		var allResults []models.Apartment
+
+		for _, provider := range providers {
+			parser, err := scraper.NewScraper(provider)
+			if err != nil {
+				log.Printf("[Worker %d] Failed to initialize scraper for %s: %v", id, provider, err)
+				continue
+			}
+
+			results, err := parser.Parse(taskData.City, taskData.MinPrice, taskData.MaxPrice, taskID)
+			if err != nil {
+				log.Printf("[Worker %d] Scraping failed for %s: %v", id, provider, err)
+				continue
+			}
+
+			allResults = append(allResults, results...)
 		}
 
-		if len(results) == 0 {
-			log.Printf("[Worker %d] No results found for %s", id, taskData.City)
+		if len(allResults) == 0 {
+			log.Printf("[Worker %d] No results found across all platforms for %s", id, taskData.City)
 			repository.UpdateTaskStatus(db, taskID, "completed")
 			continue
 		}
 
-		// Save scraped results to the database
-		err = repository.SaveApartment(db, results)
+		err = repository.SaveApartment(db, allResults)
 		if err != nil {
 			log.Printf("[Worker %d] Failed to save apartments: %v", id, err)
 			repository.UpdateTaskStatus(db, taskID, "failed")
@@ -65,7 +77,7 @@ func worker(id int, db *sql.DB, tasks <-chan string, wg *sync.WaitGroup) {
 		}
 
 		// Send email notification with results
-		err = notifier.SendResults(taskData.Email, results)
+		err = notifier.SendResults(taskData.Email, allResults)
 		if err != nil {
 			log.Printf("[Worker %d] Failed to send email: %v", id, err)
 		} else {
@@ -79,7 +91,7 @@ func worker(id int, db *sql.DB, tasks <-chan string, wg *sync.WaitGroup) {
 			continue
 		}
 
-		log.Printf("[Worker %d] Successfully completed task: %s. Apartments found: %d", id, taskID, len(results))
+		log.Printf("[Worker %d] Successfully completed task: %s. Apartments found: %d", id, taskID, len(allResults))
 	}
 
 	log.Printf("[Worker %d] Shutting down (channel closed)", id)
