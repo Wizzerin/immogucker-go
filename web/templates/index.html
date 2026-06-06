@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Immogucker Dashboard</title>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"
+        />
+        <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+        <style>
+            .container {
+                margin-top: 2rem;
+            }
+            .uuid {
+                font-family: monospace;
+                font-size: 0.85em;
+                color: #888;
+            }
+            .success {
+                color: #7ed321;
+            }
+            .error {
+                color: #d0021b;
+            }
+            .processing {
+                color: #f5a623;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="container">
+            <hgroup>
+                <h1>🏠 Immogucker API</h1>
+                <h2>
+                    Asynchronous Real Estate Scraper (WG-Gesucht &
+                    Kleinanzeigen)
+                </h2>
+            </hgroup>
+
+            <article>
+                <header><strong>Initialize New Task</strong></header>
+                <form
+                    hx-post="/ui/tasks"
+                    hx-target="#task-list"
+                    hx-swap="afterbegin"
+                >
+                    <div class="grid">
+                        <label
+                            >Target City
+                            <select name="city" required>
+                                <option value="Köln" selected>Köln</option>
+                                <option value="Neuss">Neuss</option>
+                                <option value="Düsseldorf">Düsseldorf</option>
+                                <option value="Berlin">Berlin</option>
+                            </select>
+                        </label>
+                        <label
+                            >Min Price (€)
+                            <input
+                                type="number"
+                                name="min_price"
+                                value="300"
+                                required
+                            />
+                        </label>
+                        <label
+                            >Max Price (€)
+                            <input
+                                type="number"
+                                name="max_price"
+                                value="800"
+                                required
+                            />
+                        </label>
+                    </div>
+                    <label
+                        >Notification Email (Excel Report)
+                        <input
+                            type="email"
+                            name="email"
+                            placeholder="your.name@example.com"
+                            required
+                        />
+                    </label>
+                    <button type="submit">Run Scraper</button>
+                </form>
+            </article>
+
+            <article>
+                <header><strong>Task Queue</strong></header>
+                <table role="grid">
+                    <thead>
+                        <tr>
+                            <th>Task ID</th>
+                            <th>City</th>
+                            <th>Budget</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="task-list">
+                        {{ range .Tasks }} {{ template "task_row.html" . }} {{
+                        end }}
+                    </tbody>
+                </table>
+            </article>
+        </main>
+    </body>
+</html>

@@ -1,0 +1,22 @@
+<tr id="task-{{ .ID }}"
+    {{ if or (eq .Status "pending") (eq .Status "processing") }}
+        hx-get="/ui/tasks/{{ .ID }}/status"
+        hx-trigger="every 3s"
+        hx-swap="outerHTML"
+    {{ end }}>
+
+    <td class="uuid">{{ .ID }}</td>
+    <td>{{ .City }}</td>
+    <td>{{ .MinPrice }} - {{ .MaxPrice }} €</td>
+    <td>
+        {{ if eq .Status "pending" }}
+            <span aria-busy="true">Pending...</span>
+        {{ else if eq .Status "processing" }}
+            <span class="processing" aria-busy="true">Processing...</span>
+        {{ else if eq .Status "completed" }}
+            <strong class="success">✓ Completed</strong>
+        {{ else }}
+            <strong class="error">✗ Failed</strong>
+        {{ end }}
+    </td>
+</tr>

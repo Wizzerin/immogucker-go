@@ -23,8 +23,8 @@ import (
 )
 
 // @title           Immogucker API
-// @version         1.0
-// @description     Asynchronous REST API for scraping real estate listings from WG-Gesucht.
+// @version         1.1
+// @description     Asynchronous REST API for scraping real estate listings from WG-Gesucht and Kleinanzeigen.
 // @contact.name    Roman Mishyn
 // @host            localhost:8080
 // @BasePath        /api/v1
@@ -48,7 +48,7 @@ func main() {
 	taskChan := make(chan string, 100)
 	var wg sync.WaitGroup
 
-	// Start the Worker Pool (e.g., 3 concurrent workers)
+	// Start the Worker Pool
 	worker.StartPool(db, taskChan, 3, &wg)
 
 	apiDeps := &handlers.API{
@@ -59,15 +59,26 @@ func main() {
 	// Configure Gin router
 	router := gin.Default()
 
+	// Load HTML templates for HTMX Dashboard
+	router.LoadHTMLGlob("web/templates/*")
+
 	// --- ENABLE SWAGGER UI ---
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// API route group
+	// --- API ROUTES ---
 	api := router.Group("/api/v1")
 	{
 		api.POST("/tasks", apiDeps.CreateTask)
 		api.GET("/tasks/:id", apiDeps.GetTaskStatus)
 		api.GET("/health", apiDeps.HealthCheck)
+	}
+
+	// --- UI DASHBOARD ROUTES ---
+	ui := router.Group("/")
+	{
+		ui.GET("/", apiDeps.RenderDashboard)
+		ui.POST("/ui/tasks", apiDeps.HandleSubmitTask)
+		ui.GET("/ui/tasks/:id/status", apiDeps.HandleTaskStatus)
 	}
 
 	srv := &http.Server{

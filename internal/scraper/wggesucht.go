@@ -13,36 +13,37 @@ import (
 
 type WGGesuchtScraper struct{}
 
-var wgCityIDs = map[string]string{
-	"Neuss":       "224",
-	"Düsseldorf":  "30",
-	"Duesseldorf": "30",
-	"Köln":        "73",
-	"Koeln":       "73",
-	"Berlin":      "8",
+type wgCityData struct {
+	Slug string
+	ID   string
+}
+
+var wgCityIDs = map[string]wgCityData{
+	"Neuss":       {"Neuss", "224"},
+	"Düsseldorf":  {"Duesseldorf", "30"},
+	"Duesseldorf": {"Duesseldorf", "30"},
+	"Köln":        {"Koeln", "73"},
+	"Koeln":       {"Koeln", "73"},
+	"Berlin":      {"Berlin", "8"},
 }
 
 func (s *WGGesuchtScraper) Parse(city string, minPrice, maxPrice int, taskID string) ([]models.Apartment, error) {
 	var apartments []models.Apartment
 
-	var targetCityName string
-	var targetCityID string
-
-	if id, exists := wgCityIDs[city]; exists {
-		targetCityName = city
-		targetCityID = id
+	var targetCity wgCityData
+	if data, exists := wgCityIDs[city]; exists {
+		targetCity = data
 	} else {
-		for name, id := range wgCityIDs {
-			if city == id {
-				targetCityName = name
-				targetCityID = id
+		for _, data := range wgCityIDs {
+			if city == data.ID {
+				targetCity = data
 				break
 			}
 		}
 	}
 
-	if targetCityID == "" {
-		return nil, fmt.Errorf("city %s is not supported by the parser (unknown ID or Name)", city)
+	if targetCity.Slug == "" {
+		return nil, fmt.Errorf("city %s is not supported by WG-Gesucht scraper", city)
 	}
 
 	c := colly.NewCollector(
@@ -110,7 +111,7 @@ func (s *WGGesuchtScraper) Parse(city string, minPrice, maxPrice int, taskID str
 	})
 
 	// Build the target URL using the mapped city ID
-	searchURL := fmt.Sprintf("https://www.wg-gesucht.de/wohnungen-in-%s.%s.2.1.0.html?rent_types[0]=1&rent_types[1]=2", targetCityName, targetCityID)
+	searchURL := fmt.Sprintf("https://www.wg-gesucht.de/wohnungen-in-%s.%s.2.1.0.html?rent_types[0]=1&rent_types[1]=2", targetCity.Slug, targetCity.ID)
 	log.Printf("[Parser] Starting data collection from URL: %s", searchURL)
 
 	err := c.Visit(searchURL)
