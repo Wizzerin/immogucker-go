@@ -1,9 +1,3 @@
-Отличная работа! Проект действительно вырос и приобрел черты серьезного production-ready сервиса.
-
-Вот полностью обновленный и актуальный README.md, который включает в себя описание новых фильтров, верификации по email и системы аккаунтов.
-
-Обновленный README.md
-Markdown
 # Immogucker API & Dashboard
 
 Immogucker is a secure, asynchronous Go-based microservice and web dashboard designed to scrape real estate listings from multiple platforms (WG-Gesucht and Kleinanzeigen). It utilizes a worker pool architecture to process scraping tasks in the background, stores results in a PostgreSQL database, and sends email notifications with an attached Excel report of the found apartments.
