@@ -75,16 +75,29 @@
                             />
                         </label>
                     </div>
-                    <label
-                        >Notification Email (Excel Report)
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="your.name@example.com"
-                            required
-                        />
-                    </label>
-                    <button type="submit">Run Scraper</button>
+
+                    <div class="grid">
+                        <label
+                            >Min Size (m²)
+                            <input type="number" name="min_size" value="30" />
+                        </label>
+                        <label
+                            >Max Size (m²)
+                            <input type="number" name="max_size" value="60" />
+                        </label>
+                        <label
+                            >Min Rooms
+                            <input type="number" name="min_rooms" value="2" />
+                        </label>
+                        <label
+                            >Max Rooms
+                            <input type="number" name="max_rooms" value="3" />
+                        </label>
+                    </div>
+
+                    <button type="submit" style="margin-top: 1rem">
+                        Run Scraper
+                    </button>
                 </form>
             </article>
 

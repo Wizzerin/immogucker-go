@@ -54,7 +54,7 @@ func worker(id int, db *sql.DB, tasks <-chan string, wg *sync.WaitGroup) {
 				continue
 			}
 
-			results, err := parser.Parse(taskData.City, taskData.MinPrice, taskData.MaxPrice, taskID)
+			results, err := parser.Parse(taskData, taskID)
 			if err != nil {
 				log.Printf("[Worker %d] Scraping failed for %s: %v", id, provider, err)
 				continue

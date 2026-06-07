@@ -14,7 +14,7 @@ const (
 )
 
 type Scraper interface {
-	Parse(city string, minPrice, maxPrice int, taskID string) ([]models.Apartment, error)
+	Parse(task models.WorkerTask, taskID string) ([]models.Apartment, error)
 }
 
 func NewScraper(provider Provider) (Scraper, error) {

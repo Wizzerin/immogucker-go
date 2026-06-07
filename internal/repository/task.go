@@ -12,11 +12,11 @@ func CreateTask(db *sql.DB, userID int, req models.TaskRequest) (string, error) 
 	var taskID string
 
 	query := `
-			INSERT INTO tasks (user_id, city, max_price, min_price, status)
-			VALUES ($1, $2, $3, $4, 'pending')
+			INSERT INTO tasks (user_id, city, max_price, min_price, min_size, max_size, min_rooms, max_rooms, status)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
 			RETURNING id
 	`
-	err := db.QueryRow(query, userID, req.City, req.MaxPrice, req.MinPrice).Scan(&taskID)
+	err := db.QueryRow(query, userID, req.City, req.MaxPrice, req.MinPrice, req.MinSize, req.MaxSize, req.MinRooms, req.MaxRooms).Scan(&taskID)
 	if err != nil {
 		return "", fmt.Errorf("failed to insert task into database: %w", err)
 	}
@@ -38,8 +38,8 @@ func UpdateTaskStatus(db *sql.DB, taskID string, status string) error {
 func GetTaskByID(db *sql.DB, userID int, id string) (models.TaskRequest, error) {
 	var req models.TaskRequest
 
-	query := `SELECT city, max_price, min_price, FROM tasks WHERE id = $1 AND user_id = $2`
-	err := db.QueryRow(query, id).Scan(&req.City, &req.MaxPrice, &req.MinPrice)
+	query := `SELECT city, max_price, min_price, min_size, max_size, min_rooms, max_rooms FROM tasks WHERE id = $1 AND user_id = $2`
+	err := db.QueryRow(query, id, userID).Scan(&req.City, &req.MaxPrice, &req.MinPrice, &req.MinSize, &req.MaxSize, &req.MinRooms, &req.MaxRooms)
 	if err != nil {
 		return req, fmt.Errorf("failed to retrieve task %s: %w", id, err)
 	}
@@ -87,12 +87,12 @@ func GetTaskForWorker(db *sql.DB, taskID string) (models.WorkerTask, error) {
 	var task models.WorkerTask
 
 	query := `
-			SELECT t.city, t.min_price, t.max_price, u.email
+	SELECT t.city, t.min_price, t.max_price, t.min_size, t.max_size, t.min_rooms, t.max_rooms, u.email
 			FROM tasks t
 			JOIN users u ON t.user_id = u.id
 			WHERE t.id = $1
 	`
-	err := db.QueryRow(query, taskID).Scan(&task.City, &task.MinPrice, &task.MaxPrice, &task.Email)
+	err := db.QueryRow(query, taskID).Scan(&task.City, &task.MinPrice, &task.MaxPrice, &task.MinSize, &task.MaxSize, &task.MinRooms, &task.MaxRooms, &task.Email)
 	if err != nil {
 		return task, fmt.Errorf("failed to retrieve task for worker %s: %w", taskID, err)
 	}

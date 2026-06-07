@@ -27,15 +27,15 @@ var kaCityIDs = map[string]kaCityData{
 	"Berlin":      {"berlin", "c203l3331"},
 }
 
-func (s *KleinanzeigenScraper) Parse(city string, minPrice, maxPrice int, taskID string) ([]models.Apartment, error) {
+func (s *KleinanzeigenScraper) Parse(task models.WorkerTask, taskID string) ([]models.Apartment, error) {
 	var apartments []models.Apartment
 
 	var targetCity kaCityData
-	if data, exists := kaCityIDs[city]; exists {
+	if data, exists := kaCityIDs[task.City]; exists {
 		targetCity = data
 	} else {
 		for _, data := range kaCityIDs {
-			if city == data.ID {
+			if task.City == data.ID {
 				targetCity = data
 				break
 			}
@@ -43,7 +43,7 @@ func (s *KleinanzeigenScraper) Parse(city string, minPrice, maxPrice int, taskID
 	}
 
 	if targetCity.Slug == "" {
-		return nil, fmt.Errorf("city %s is not supported by Kleinanzeigen scraper", city)
+		return nil, fmt.Errorf("city %s is not supported by Kleinanzeigen scraper", task.City)
 	}
 
 	c := colly.NewCollector(
@@ -83,7 +83,7 @@ func (s *KleinanzeigenScraper) Parse(city string, minPrice, maxPrice int, taskID
 			return
 		}
 
-		if price < minPrice || price > maxPrice {
+		if price < task.MinPrice || price > task.MaxPrice {
 			log.Printf("[Kleinanzeigen] Filtered out by price (%d €): %s", price, title)
 			return
 		}
@@ -100,7 +100,26 @@ func (s *KleinanzeigenScraper) Parse(city string, minPrice, maxPrice int, taskID
 		})
 	})
 
-	searchURL := fmt.Sprintf("https://www.kleinanzeigen.de/s-wohnung-mieten/%s/preis:%d:%d/%s+wohnung_mieten.swap_s:nein", targetCity.Slug, minPrice, maxPrice, targetCity.ID)
+	modifiers := "+wohnung_mieten.swap_s:nein" // Исключаем обмен
+
+	if task.MinSize > 0 || task.MaxSize > 0 {
+		max := ""
+		if task.MaxSize > 0 {
+			max = strconv.Itoa(task.MaxSize)
+		}
+		modifiers += fmt.Sprintf("+wohnung_mieten.qm_d:%d,%s", task.MinSize, max)
+	}
+
+	if task.MinRooms > 0 || task.MaxRooms > 0 {
+		max := ""
+		if task.MaxRooms > 0 {
+			max = strconv.Itoa(task.MaxRooms)
+		}
+		modifiers += fmt.Sprintf("+wohnung_mieten.zimmer_d:%d,%s", task.MinRooms, max)
+	}
+
+	searchURL := fmt.Sprintf("https://www.kleinanzeigen.de/s-wohnung-mieten/%s/preis:%d:%d/%s%s", targetCity.Slug, task.MinPrice, task.MaxPrice, targetCity.ID, modifiers)
+	log.Printf("[Parser] Starting data collection from URL: %s", searchURL)
 
 	err := c.Visit(searchURL)
 	if err != nil {

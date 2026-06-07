@@ -27,15 +27,15 @@ var wgCityIDs = map[string]wgCityData{
 	"Berlin":      {"Berlin", "8"},
 }
 
-func (s *WGGesuchtScraper) Parse(city string, minPrice, maxPrice int, taskID string) ([]models.Apartment, error) {
+func (s *WGGesuchtScraper) Parse(task models.WorkerTask, taskID string) ([]models.Apartment, error) {
 	var apartments []models.Apartment
 
 	var targetCity wgCityData
-	if data, exists := wgCityIDs[city]; exists {
+	if data, exists := wgCityIDs[task.City]; exists {
 		targetCity = data
 	} else {
 		for _, data := range wgCityIDs {
-			if city == data.ID {
+			if task.City == data.ID {
 				targetCity = data
 				break
 			}
@@ -43,7 +43,7 @@ func (s *WGGesuchtScraper) Parse(city string, minPrice, maxPrice int, taskID str
 	}
 
 	if targetCity.Slug == "" {
-		return nil, fmt.Errorf("city %s is not supported by WG-Gesucht scraper", city)
+		return nil, fmt.Errorf("city %s is not supported by WG-Gesucht scraper", task.City)
 	}
 
 	c := colly.NewCollector(
@@ -92,8 +92,8 @@ func (s *WGGesuchtScraper) Parse(city string, minPrice, maxPrice int, taskID str
 		}
 
 		// Filter results on the fly to save memory
-		if price < minPrice || price > maxPrice {
-			log.Printf("[Parser] Apartment filtered out by price (%d € > %d €): %s", price, maxPrice, title)
+		if price < task.MinPrice || price > task.MaxPrice {
+			log.Printf("[Parser] Apartment filtered out by price (%d € > %d €): %s", price, task.MaxPrice, title)
 			return
 		}
 
@@ -110,8 +110,26 @@ func (s *WGGesuchtScraper) Parse(city string, minPrice, maxPrice int, taskID str
 		})
 	})
 
+	queryParams := "?rent_types[0]=1&rent_types[1]=2"
+
+	if task.MaxSize > 0 || task.MaxSize > 0 {
+		maxSize := task.MaxSize
+		if maxSize == 0 {
+			maxSize = 999
+		}
+		queryParams += fmt.Sprintf("&min_size=%d&max_size=%d", task.MinSize, task.MaxSize)
+	}
+
+	if task.MinRooms > 0 || task.MaxRooms > 0 {
+		maxRooms := task.MaxRooms
+		if maxRooms == 0 {
+			maxRooms = 99
+		}
+		queryParams += fmt.Sprintf("&rmMin=%d&rmMax=%d", task.MinRooms, maxRooms)
+	}
+
 	// Build the target URL using the mapped city ID
-	searchURL := fmt.Sprintf("https://www.wg-gesucht.de/wohnungen-in-%s.%s.2.1.0.html?rent_types[0]=1&rent_types[1]=2", targetCity.Slug, targetCity.ID)
+	searchURL := fmt.Sprintf("https://www.wg-gesucht.de/wohnungen-in-%s.%s.2.1.0.html%s", targetCity.Slug, targetCity.ID, queryParams)
 	log.Printf("[Parser] Starting data collection from URL: %s", searchURL)
 
 	err := c.Visit(searchURL)
