@@ -8,15 +8,15 @@ import (
 )
 
 // CreateTask inserts a new scraping task into the database and returns its UUID
-func CreateTask(db *sql.DB, req models.TaskRequest) (string, error) {
+func CreateTask(db *sql.DB, userID int, req models.TaskRequest) (string, error) {
 	var taskID string
 
 	query := `
-			INSERT INTO tasks (city, max_price, min_price, email, status)
+			INSERT INTO tasks (user_id, city, max_price, min_price, status)
 			VALUES ($1, $2, $3, $4, 'pending')
 			RETURNING id
 	`
-	err := db.QueryRow(query, req.City, req.MaxPrice, req.MinPrice, req.Email).Scan(&taskID)
+	err := db.QueryRow(query, userID, req.City, req.MaxPrice, req.MinPrice).Scan(&taskID)
 	if err != nil {
 		return "", fmt.Errorf("failed to insert task into database: %w", err)
 	}
@@ -35,11 +35,11 @@ func UpdateTaskStatus(db *sql.DB, taskID string, status string) error {
 }
 
 // GetTaskByID retrieves task parameters based on its UUID
-func GetTaskByID(db *sql.DB, id string) (models.TaskRequest, error) {
+func GetTaskByID(db *sql.DB, userID int, id string) (models.TaskRequest, error) {
 	var req models.TaskRequest
 
-	query := `SELECT city, max_price, min_price, email FROM tasks WHERE id = $1`
-	err := db.QueryRow(query, id).Scan(&req.City, &req.MaxPrice, &req.MinPrice, &req.Email)
+	query := `SELECT city, max_price, min_price, FROM tasks WHERE id = $1 AND user_id = $2`
+	err := db.QueryRow(query, id).Scan(&req.City, &req.MaxPrice, &req.MinPrice)
 	if err != nil {
 		return req, fmt.Errorf("failed to retrieve task %s: %w", id, err)
 	}
@@ -48,11 +48,11 @@ func GetTaskByID(db *sql.DB, id string) (models.TaskRequest, error) {
 }
 
 // GetTaskWithResults returns the task status and its associated apartments
-func GetTaskWithResults(db *sql.DB, taskID string) (string, []models.Apartment, error) {
+func GetTaskWithResults(db *sql.DB, userID int, taskID string) (string, []models.Apartment, error) {
 	var status string
 
 	// 1. Retrieve the task status
-	err := db.QueryRow(`SELECT status FROM tasks WHERE id = $1`, taskID).Scan(&status)
+	err := db.QueryRow(`SELECT status FROM tasks WHERE id = $1 AND user_id = $2`, taskID, userID).Scan(&status)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", nil, fmt.Errorf("task not found")
@@ -81,4 +81,21 @@ func GetTaskWithResults(db *sql.DB, taskID string) (string, []models.Apartment, 
 	}
 
 	return status, apartments, nil
+}
+
+func GetTaskForWorker(db *sql.DB, taskID string) (models.WorkerTask, error) {
+	var task models.WorkerTask
+
+	query := `
+			SELECT t.city, t.min_price, t.max_price, u.email
+			FROM tasks t
+			JOIN users u ON t.user_id = u.id
+			WHERE t.id = $1
+	`
+	err := db.QueryRow(query, taskID).Scan(&task.City, &task.MinPrice, &task.MaxPrice, &task.Email)
+	if err != nil {
+		return task, fmt.Errorf("failed to retrieve task for worker %s: %w", taskID, err)
+	}
+
+	return task, nil
 }

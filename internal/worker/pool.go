@@ -34,7 +34,7 @@ func worker(id int, db *sql.DB, tasks <-chan string, wg *sync.WaitGroup) {
 			continue
 		}
 
-		taskData, err := repository.GetTaskByID(db, taskID)
+		taskData, err := repository.GetTaskForWorker(db, taskID)
 		if err != nil {
 			log.Printf("[Worker %d] Failed to retrieve task data: %v", id, err)
 			repository.UpdateTaskStatus(db, taskID, "failed")

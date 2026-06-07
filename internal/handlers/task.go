@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/Wizzerin/immogucker-go/internal/models"
@@ -12,6 +13,20 @@ import (
 type API struct {
 	DB       *sql.DB
 	TaskChan chan string // Channel to pass task UUIDs to workers
+}
+
+func getUserIDFromContext(c *gin.Context) (int, error) {
+	userIDVal, exists := c.Get("userID")
+	if !exists {
+		return 0, errors.New("userID not found in context")
+	}
+
+	userID, ok := userIDVal.(int)
+	if !ok {
+		return 0, errors.New("userID is of invalid type")
+	}
+
+	return userID, nil
 }
 
 // CreateTask godoc
@@ -27,12 +42,18 @@ type API struct {
 func (api *API) CreateTask(c *gin.Context) {
 	var req models.TaskRequest
 
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	taskID, err := repository.CreateTask(api.DB, req)
+	taskID, err := repository.CreateTask(api.DB, userID, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
@@ -62,11 +83,16 @@ func (api *API) CreateTask(c *gin.Context) {
 // @Failure      500 {object} map[string]string "Internal server error"
 // @Router       /tasks/{id} [get]
 func (api *API) GetTaskStatus(c *gin.Context) {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 	// Extract UUID from the URL path
 	taskID := c.Param("id")
 
 	// Query the DB for status and results
-	status, apartments, err := repository.GetTaskWithResults(api.DB, taskID)
+	status, apartments, err := repository.GetTaskWithResults(api.DB, userID, taskID)
 	if err != nil {
 		// Compatible check for both English and Russian DB errors until repository is translated
 		if err.Error() == "task not found" || err.Error() == "задача не найдена" {

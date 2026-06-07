@@ -2,6 +2,7 @@ CREATE TYPE task_status AS ENUM ('pending', 'processing', 'completed', 'failed')
 
 CREATE TABLE tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     city VARCHAR(255) NOT NULL,
     max_price INTEGER NOT NULL,
     min_price INT NOT NULL DEFAULT 300,
