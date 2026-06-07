@@ -10,40 +10,85 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required"`
+// Render HTML pages
+func (h *API) RenderLogin(c *gin.Context) {
+	c.HTML(http.StatusOK, "login.html", nil)
+}
+
+func (h *API) RenderRegister(c *gin.Context) {
+	c.HTML(http.StatusOK, "register.html", nil)
 }
 
 func (h *API) Login(c *gin.Context) {
-	var req LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+	// Use PostForm instead of ShouldBindJSON for HTML form data
+	email := c.PostForm("email")
+	password := c.PostForm("password")
+
+	if email == "" || password == "" {
+		// Return an HTML snippet to be swapped by HTMX into the error container
+		c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte("Email and password are required"))
 		return
 	}
 
-	user, err := repository.GetUserByEmail(h.DB, req.Email)
+	user, err := repository.GetUserByEmail(h.DB, email)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.Data(http.StatusUnauthorized, "text/html; charset=utf-8", []byte("Invalid credentials"))
 		return
 	}
 
-	log.Printf("Attempting login for: %s", req.Email)
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		log.Printf("Bcrypt error: %v", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+	log.Printf("Attempting login for: %s", email)
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+		c.Data(http.StatusUnauthorized, "text/html; charset=utf-8", []byte("Invalid credentials"))
 		return
 	}
 
 	sessionID := uuid.New().String()
-	log.Printf("Creating session for UserID: %d", user.ID)
 	if err := repository.CreateSession(h.DB, sessionID, user.ID); err != nil {
 		log.Printf("Session creation error: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create session"})
+		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte("Internal server error"))
+		return
+	}
+
+	// Set the session cookie
+	c.SetCookie("session_id", sessionID, 86400, "/", "", false, true)
+
+	// Instruct HTMX to perform a client-side redirect to the dashboard
+	c.Header("HX-Redirect", "/")
+	c.Status(http.StatusOK)
+}
+
+func (h *API) Register(c *gin.Context) {
+	email := c.PostForm("email")
+	password := c.PostForm("password")
+
+	if email == "" || password == "" {
+		c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte("Email and password are required"))
+		return
+	}
+
+	// Hash the provided password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte("Failed to process password"))
+		return
+	}
+
+	// Note: Make sure CreateUser is implemented in your repository
+	userID, err := repository.CreateUser(h.DB, email, string(hashedPassword))
+	if err != nil {
+		log.Printf("User creation error: %v", err)
+		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte("Email already exists or server error"))
+		return
+	}
+
+	// Automatically authenticate the user after successful registration
+	sessionID := uuid.New().String()
+	if err := repository.CreateSession(h.DB, sessionID, userID); err != nil {
+		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte("User created, but login failed"))
 		return
 	}
 
 	c.SetCookie("session_id", sessionID, 86400, "/", "", false, true)
-
-	c.JSON(http.StatusOK, gin.H{"message": "logged in seccessfully"})
+	c.Header("HX-Redirect", "/")
+	c.Status(http.StatusOK)
 }

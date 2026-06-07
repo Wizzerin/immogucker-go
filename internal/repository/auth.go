@@ -14,7 +14,7 @@ func CreateSession(db *sql.DB, sessionID string, userID int) error {
 
 func GetUserIDBySession(db *sql.DB, sessionID string) (int, error) {
 	var userID int
-	query := `SELECT iser_id FROM sessions WHERE id = $1 AND expires_at > NOW()`
+	query := `SELECT user_id FROM sessions WHERE id = $1 AND expires_at > NOW()`
 	err := db.QueryRow(query, sessionID).Scan(&userID)
 	return userID, err
 }

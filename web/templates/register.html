@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Register - Immogucker</title>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css"
+        />
+        <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+        <style>
+            body {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+            }
+            article {
+                width: 100%;
+                max-width: 400px;
+            }
+            .error-message {
+                color: #d0021b;
+                font-size: 0.9em;
+                margin-bottom: 1rem;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="container">
+            <article>
+                <hgroup>
+                    <h2>Create Account</h2>
+                    <h3>Join Immogucker</h3>
+                </hgroup>
+
+                <div id="reg-error" class="error-message"></div>
+
+                <form
+                    hx-post="/api/v1/auth/register"
+                    hx-target="#reg-error"
+                    hx-swap="innerHTML"
+                >
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="Email address"
+                        required
+                    />
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        required
+                    />
+                    <button type="submit">Sign up</button>
+                </form>
+                <small
+                    >Already have an account? <a href="/login">Log in</a></small
+                >
+            </article>
+        </main>
+    </body>
+</html>

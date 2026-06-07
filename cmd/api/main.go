@@ -66,12 +66,19 @@ func main() {
 	// --- ENABLE SWAGGER UI ---
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// --- API ROUTES ---
+	// --- API AUTH ROUTES ---
 	auth := router.Group("/api/v1/auth")
 	{
 		auth.POST("/login", apiDeps.Login)
+		auth.POST("/register", apiDeps.Register) // Added registration route
 	}
 
+	// --- PUBLIC UI ROUTES ---
+	// Serve login and registration HTML pages
+	router.GET("/login", apiDeps.RenderLogin)
+	router.GET("/register", apiDeps.RenderRegister)
+
+	// --- PROTECTED API ROUTES ---
 	protected := router.Group("/api/v1")
 	protected.Use(middleware.AuthMiddleware(db))
 	{
@@ -80,8 +87,9 @@ func main() {
 		protected.GET("/health", apiDeps.HealthCheck)
 	}
 
-	// --- UI DASHBOARD ROUTES ---
+	// --- PROTECTED UI DASHBOARD ROUTES ---
 	ui := router.Group("/")
+	ui.Use(middleware.AuthMiddleware(db)) // <-- PROTECTED THE MAIN PAGE
 	{
 		ui.GET("/", apiDeps.RenderDashboard)
 		ui.POST("/ui/tasks", apiDeps.HandleSubmitTask)
