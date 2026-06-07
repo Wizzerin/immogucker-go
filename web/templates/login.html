@@ -26,6 +26,15 @@
                 margin-bottom: 1rem;
                 text-align: center;
             }
+            .success-message {
+                color: #7ed321;
+                font-size: 0.9em;
+                margin-bottom: 1rem;
+                text-align: center;
+                background-color: rgba(126, 211, 33, 0.1);
+                padding: 0.5rem;
+                border-radius: 4px;
+            }
         </style>
     </head>
     <body>
@@ -33,14 +42,18 @@
             <article>
                 <hgroup>
                     <h2>Welcome Back</h2>
-                    <h3>Login to Immogucker</h3>
+                    <h3>Log in to Immogucker</h3>
                 </hgroup>
 
-                <div id="auth-error" class="error-message"></div>
+                {{ if .Message }}
+                <div class="success-message">{{ .Message }}</div>
+                {{ end }}
+
+                <div id="login-error" class="error-message"></div>
 
                 <form
                     hx-post="/api/v1/auth/login"
-                    hx-target="#auth-error"
+                    hx-target="#login-error"
                     hx-swap="innerHTML"
                 >
                     <input

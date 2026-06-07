@@ -18,22 +18,27 @@ type TaskView struct {
 	Status   string
 }
 
-// RenderDashboard serves the main HTML dashboard with user's specific tasks
 func (api *API) RenderDashboard(c *gin.Context) {
-	userID, err := getUserIDFromContext(c)
+	userID, err := getUserIDFromContext(c, api.DB)
 	if err != nil {
+		log.Printf("[DEBUG-AUTH] RenderDashboard rejected access: %v", err)
 		c.Redirect(http.StatusFound, "/login")
 		return
 	}
 
-	// Load existing tasks for the authorized user
+	user, err := repository.GetUserByID(api.DB, userID)
+	if err != nil {
+		log.Printf("[DEBUG-AUTH] Failed to find user ID %d in database: %v", userID, err)
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
 	domainTasks, err := repository.GetUserTasks(api.DB, userID)
 	if err != nil {
 		log.Printf("[UI Error] Failed to load user tasks: %v", err)
-		domainTasks = []models.Task{} // Fallback to empty list on error
+		domainTasks = []models.Task{}
 	}
 
-	// Map domain models to view models
 	var tasksView []TaskView
 	for _, t := range domainTasks {
 		tasksView = append(tasksView, TaskView{
@@ -46,13 +51,14 @@ func (api *API) RenderDashboard(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "index.html", gin.H{
+		"User":  user,
 		"Tasks": tasksView,
 	})
 }
 
 // HandleSubmitTask processes the HTMX form submission
 func (api *API) HandleSubmitTask(c *gin.Context) {
-	userID, err := getUserIDFromContext(c)
+	userID, err := getUserIDFromContext(c, api.DB)
 	if err != nil {
 		c.String(http.StatusUnauthorized, "Unauthorized")
 		return
@@ -86,7 +92,7 @@ func (api *API) HandleSubmitTask(c *gin.Context) {
 
 // HandleTaskStatus returns the updated HTML snippet for HTMX polling
 func (api *API) HandleTaskStatus(c *gin.Context) {
-	userID, err := getUserIDFromContext(c)
+	userID, err := getUserIDFromContext(c, api.DB)
 	if err != nil {
 		c.String(http.StatusUnauthorized, "Unauthorized")
 		return

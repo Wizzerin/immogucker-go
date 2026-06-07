@@ -83,3 +83,38 @@ func SendResults(toEmail string, apartments []models.Apartment) error {
 
 	return nil
 }
+
+func SendVerificationEmail(toEmail, username, token string) error {
+	smtpHost := os.Getenv("SMTP_HOST")
+	smtpPort := os.Getenv("SMTP_PORT")
+	senderEmail := os.Getenv("SMTP_EMAIL")
+	senderPass := os.Getenv("SMTP_PASSWORD")
+
+	baseURL := os.Getenv("BASE_URL")
+
+	if senderEmail == "" || senderPass == "" {
+		return fmt.Errorf("SMTP_EMAIL or SMTP_PASSWORD enviroment variables are not set")
+	}
+
+	var body bytes.Buffer
+	body.WriteString(fmt.Sprintf("To: %s\r\n", toEmail))
+	body.WriteString("Subject: Immogucker: Please verify your email\r\n")
+	body.WriteString("Content-Type: text/html; charset=\"UTF-8\"\r\n\r\n")
+
+	verifyLink := fmt.Sprintf("%s/api/v1/auth/verify?token=%s", baseURL, token)
+
+	htmlContent := fmt.Sprintf(`
+		<h2>Welcome to Immogucker, %s!</h2>
+		<p>Please click the link below to verify your email address and unlock the scraper:</p>
+		<p><a href="%s">Verify My Email</a></p>
+	`, username, verifyLink)
+	body.WriteString(htmlContent)
+
+	auth := smtp.PlainAuth("", senderEmail, senderPass, smtpHost)
+	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, senderEmail, []string{toEmail}, body.Bytes())
+	if err != nil {
+		return fmt.Errorf("failed to send verification email: %w", err)
+	}
+
+	return nil
+}

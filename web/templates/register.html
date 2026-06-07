@@ -26,6 +26,12 @@
                 margin-bottom: 1rem;
                 text-align: center;
             }
+            .info-message {
+                color: #888;
+                font-size: 0.85em;
+                text-align: center;
+                margin-bottom: 1rem;
+            }
         </style>
     </head>
     <body>
@@ -44,6 +50,12 @@
                     hx-swap="innerHTML"
                 >
                     <input
+                        type="text"
+                        name="username"
+                        placeholder="Username"
+                        required
+                    />
+                    <input
                         type="email"
                         name="email"
                         placeholder="Email address"
@@ -55,6 +67,16 @@
                         placeholder="Password"
                         required
                     />
+                    <input
+                        type="password"
+                        name="confirm_password"
+                        placeholder="Confirm Password"
+                        required
+                    />
+
+                    <p class="info-message">
+                        A verification link will be sent to your email.
+                    </p>
                     <button type="submit">Sign up</button>
                 </form>
                 <small

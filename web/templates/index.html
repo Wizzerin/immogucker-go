@@ -11,7 +11,7 @@
         <script src="https://unpkg.com/htmx.org@1.9.10"></script>
         <style>
             .container {
-                margin-top: 2rem;
+                margin-top: 1rem;
             }
             .uuid {
                 font-family: monospace;
@@ -27,18 +27,39 @@
             .processing {
                 color: #f5a623;
             }
+            .verification-warning {
+                background-color: rgba(245, 166, 35, 0.1);
+                border-left: 4px solid #f5a623;
+                padding: 1rem;
+                margin-bottom: 2rem;
+            }
         </style>
     </head>
     <body>
+        <nav class="container">
+            <ul>
+                <li><strong>🏠 Immogucker API</strong></li>
+            </ul>
+            <ul>
+                <li>Hello, <strong>{{ .User.Username }}</strong>!</li>
+                <li>
+                    <button
+                        class="outline secondary"
+                        hx-post="/api/v1/auth/logout"
+                        style="padding: 0.25rem 1rem; margin-bottom: 0"
+                    >
+                        Logout
+                    </button>
+                </li>
+            </ul>
+        </nav>
+
         <main class="container">
             <hgroup>
-                <h1>🏠 Immogucker API</h1>
-                <h2>
-                    Asynchronous Real Estate Scraper (WG-Gesucht &
-                    Kleinanzeigen)
-                </h2>
+                <h2>Asynchronous Real Estate Scraper</h2>
             </hgroup>
 
+            {{ if .User.IsEmailVerified }}
             <article>
                 <header><strong>Initialize New Task</strong></header>
                 <form
@@ -100,6 +121,19 @@
                     </button>
                 </form>
             </article>
+            {{ else }}
+            <article class="verification-warning">
+                <header><strong>Email Verification Required</strong></header>
+                <p>
+                    We've sent a confirmation link to
+                    <strong>{{ .User.Email }}</strong>.
+                </p>
+                <p>
+                    Please check your inbox (and spam folder) and click the link
+                    to unlock the scraper.
+                </p>
+            </article>
+            {{ end }}
 
             <article>
                 <header><strong>Task Queue</strong></header>

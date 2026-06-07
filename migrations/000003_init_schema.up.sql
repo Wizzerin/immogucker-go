@@ -6,7 +6,6 @@ CREATE TABLE tasks (
     city VARCHAR(255) NOT NULL,
     max_price INTEGER NOT NULL,
     min_price INT NOT NULL DEFAULT 300,
-    email VARCHAR(255) NOT NULL,
     status task_status NOT NULL DEFAULT 'pending',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

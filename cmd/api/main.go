@@ -70,7 +70,10 @@ func main() {
 	auth := router.Group("/api/v1/auth")
 	{
 		auth.POST("/login", apiDeps.Login)
+		router.GET("/health", apiDeps.HealthCheck)
 		auth.POST("/register", apiDeps.Register) // Added registration route
+		auth.GET("/verify", apiDeps.VerifyEmailHandler)
+		auth.POST("/logout", apiDeps.Logout)
 	}
 
 	// --- PUBLIC UI ROUTES ---
@@ -84,7 +87,6 @@ func main() {
 	{
 		protected.POST("/tasks", apiDeps.CreateTask)
 		protected.GET("/tasks/:id", apiDeps.GetTaskStatus)
-		protected.GET("/health", apiDeps.HealthCheck)
 	}
 
 	// --- PROTECTED UI DASHBOARD ROUTES ---

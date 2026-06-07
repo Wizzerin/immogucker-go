@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"database/sql"
-	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/Wizzerin/immogucker-go/internal/models"
@@ -15,15 +15,15 @@ type API struct {
 	TaskChan chan string // Channel to pass task UUIDs to workers
 }
 
-func getUserIDFromContext(c *gin.Context) (int, error) {
-	userIDVal, exists := c.Get("userID")
-	if !exists {
-		return 0, errors.New("userID not found in context")
+func getUserIDFromContext(c *gin.Context, db *sql.DB) (int, error) {
+	sessionID, err := c.Cookie("session_id")
+	if err != nil {
+		return 0, fmt.Errorf("cookie missing or expired: %w", err)
 	}
 
-	userID, ok := userIDVal.(int)
-	if !ok {
-		return 0, errors.New("userID is of invalid type")
+	userID, err := repository.GetUserIDBySession(db, sessionID)
+	if err != nil {
+		return 0, fmt.Errorf("invalid session: %w", err)
 	}
 
 	return userID, nil
@@ -42,7 +42,7 @@ func getUserIDFromContext(c *gin.Context) (int, error) {
 func (api *API) CreateTask(c *gin.Context) {
 	var req models.TaskRequest
 
-	userID, err := getUserIDFromContext(c)
+	userID, err := getUserIDFromContext(c, api.DB)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
@@ -83,7 +83,7 @@ func (api *API) CreateTask(c *gin.Context) {
 // @Failure      500 {object} map[string]string "Internal server error"
 // @Router       /tasks/{id} [get]
 func (api *API) GetTaskStatus(c *gin.Context) {
-	userID, err := getUserIDFromContext(c)
+	userID, err := getUserIDFromContext(c, api.DB)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return

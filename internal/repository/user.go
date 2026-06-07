@@ -2,7 +2,9 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Wizzerin/immogucker-go/internal/models"
 )
@@ -28,18 +30,27 @@ func GetUserTasks(db *sql.DB, userID int) ([]models.Task, error) {
 	return tasks, nil
 }
 
-func CreateUser(db *sql.DB, email, passwordHash string) (int, error) {
+func CreateUser(db *sql.DB, username, email, passwordHash, verificationToken string) (int, error) {
 	var userID int
 
 	// The RETURNING id clause allows us to get the generated primary key immediately
 	query := `
-		INSERT INTO users (email, password_hash)
-		VALUES ($1, $2)
+		INSERT INTO users (username, email, password_hash, verification_token)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id
 	`
 
-	err := db.QueryRow(query, email, passwordHash).Scan(&userID)
+	err := db.QueryRow(query, username, email, passwordHash, verificationToken).Scan(&userID)
 	if err != nil {
+		if strings.Contains(err.Error(), "users_username_key") {
+			return 0, errors.New("username_taken")
+		}
+		if strings.Contains(err.Error(), "users_email_key") {
+			return 0, errors.New("email_taken")
+		}
+		if strings.Contains(err.Error(), "users_email_key") {
+			return 0, errors.New("email_taken")
+		}
 		return 0, fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -47,7 +58,27 @@ func CreateUser(db *sql.DB, email, passwordHash string) (int, error) {
 }
 func GetUserByEmail(db *sql.DB, email string) (models.User, error) {
 	var u models.User
-	query := `SELECT id, email, password_hash, role FROM users WHERE email = $1`
-	err := db.QueryRow(query, email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role)
+	query := `SELECT id, email, password_hash, role, is_email_verified FROM users WHERE email = $1`
+	err := db.QueryRow(query, email).Scan(&u.ID, &u.Email, &u.PasswordHash, &u.Role, &u.IsEmailVerified)
 	return u, err
+}
+
+func GetUserByID(db *sql.DB, id int) (models.User, error) {
+	var u models.User
+	query := `SELECT id, username, email, password_hash, role, is_email_verified FROM users WHERE id = $1`
+	err := db.QueryRow(query, id).Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Role, &u.IsEmailVerified)
+	return u, err
+}
+
+func VerifyEmail(db *sql.DB, token string) error {
+	query := `UPDATE users SET is_email_verified = true, verification_token = NULL WHERE verification_token = $1 AND is_email_verified = FALSE`
+	res, err := db.Exec(query, token)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected == 0 {
+		return errors.New("invalid_or_expire_token")
+	}
+	return nil
 }

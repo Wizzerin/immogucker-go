@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Wizzerin/immogucker-go/internal/notifier"
 	"github.com/Wizzerin/immogucker-go/internal/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -58,11 +59,18 @@ func (h *API) Login(c *gin.Context) {
 }
 
 func (h *API) Register(c *gin.Context) {
+	username := c.PostForm("username")
 	email := c.PostForm("email")
 	password := c.PostForm("password")
+	confirmPassword := c.PostForm("confirm_password")
 
-	if email == "" || password == "" {
+	if username == "" || email == "" || password == "" {
 		c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte("Email and password are required"))
+		return
+	}
+
+	if password != confirmPassword {
+		c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte("Passwords do not match"))
 		return
 	}
 
@@ -73,13 +81,28 @@ func (h *API) Register(c *gin.Context) {
 		return
 	}
 
+	verificationToken := uuid.New().String()
+
 	// Note: Make sure CreateUser is implemented in your repository
-	userID, err := repository.CreateUser(h.DB, email, string(hashedPassword))
+	userID, err := repository.CreateUser(h.DB, username, email, string(hashedPassword), verificationToken)
 	if err != nil {
-		log.Printf("User creation error: %v", err)
-		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte("Email already exists or server error"))
+		if err.Error() == "username_taken" {
+			c.Data(http.StatusConflict, "text/html; charset=utf-8", []byte("Username is already taken"))
+			return
+		}
+		if err.Error() == "email_taken" {
+			c.Data(http.StatusConflict, "text/html; charset=utf-8", []byte("Email is already registered"))
+			return
+		}
+		c.Data(http.StatusInternalServerError, "text/html; charset=utf-8", []byte("Server error during registration"))
 		return
 	}
+
+	go func() {
+		if err := notifier.SendVerificationEmail(email, username, verificationToken); err != nil {
+			log.Printf("Failed to send verification email to %s: %v", email, err)
+		}
+	}()
 
 	// Automatically authenticate the user after successful registration
 	sessionID := uuid.New().String()
@@ -91,4 +114,40 @@ func (h *API) Register(c *gin.Context) {
 	c.SetCookie("session_id", sessionID, 86400, "/", "", false, true)
 	c.Header("HX-Redirect", "/")
 	c.Status(http.StatusOK)
+}
+
+func (h *API) VerifyEmailHandler(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		c.String(http.StatusBadRequest, "Invalid or already used verification link.")
+		return
+	}
+
+	err := repository.VerifyEmail(h.DB, token)
+	if err != nil {
+		log.Printf("[Auth] Verification failed for token %s: %v", token, err)
+		c.String(http.StatusBadRequest, "Invalid or already used verification link.")
+		return
+	}
+
+	c.HTML(http.StatusOK, "login.html", gin.H{
+		"Message": "Email successfully verified! You can now use the scraper. Please log in if you haven't already.",
+	})
+}
+
+func (h *API) Logout(c *gin.Context) {
+	sessionID, err := c.Cookie("session_id")
+	if err == nil && sessionID != "" {
+		repository.DeleteSession(h.DB, sessionID)
+	}
+
+	c.SetCookie("session_id", "", -1, "/", "", false, true)
+
+	if c.GetHeader("HX-Request") == "true" {
+		c.Header("HX-Redirect", "/login")
+		c.Status(http.StatusOK)
+		return
+	}
+
+	c.Redirect(http.StatusFound, "/login")
 }
