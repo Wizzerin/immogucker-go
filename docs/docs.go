@@ -141,7 +141,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "city",
-                "email",
                 "max_price",
                 "min_price"
             ],
@@ -149,13 +148,22 @@ const docTemplate = `{
                 "city": {
                     "type": "string"
                 },
-                "email": {
-                    "type": "string"
-                },
                 "max_price": {
                     "type": "integer"
                 },
+                "max_rooms": {
+                    "type": "integer"
+                },
+                "max_size": {
+                    "type": "integer"
+                },
                 "min_price": {
+                    "type": "integer"
+                },
+                "min_rooms": {
+                    "type": "integer"
+                },
+                "min_size": {
                     "type": "integer"
                 }
             }
