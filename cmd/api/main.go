@@ -13,6 +13,7 @@ import (
 
 	"github.com/Wizzerin/immogucker-go/internal/config"
 	"github.com/Wizzerin/immogucker-go/internal/handlers"
+	"github.com/Wizzerin/immogucker-go/internal/middleware"
 	"github.com/Wizzerin/immogucker-go/internal/repository"
 	"github.com/Wizzerin/immogucker-go/internal/worker"
 	"github.com/gin-gonic/gin"
@@ -66,11 +67,17 @@ func main() {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// --- API ROUTES ---
-	api := router.Group("/api/v1")
+	auth := router.Group("/api/v1/auth")
 	{
-		api.POST("/tasks", apiDeps.CreateTask)
-		api.GET("/tasks/:id", apiDeps.GetTaskStatus)
-		api.GET("/health", apiDeps.HealthCheck)
+		auth.POST("/login", apiDeps.Login)
+	}
+
+	protected := router.Group("/api/v1")
+	protected.Use(middleware.AuthMiddleware(db))
+	{
+		protected.POST("/tasks", apiDeps.CreateTask)
+		protected.GET("/tasks/:id", apiDeps.GetTaskStatus)
+		protected.GET("/health", apiDeps.HealthCheck)
 	}
 
 	// --- UI DASHBOARD ROUTES ---

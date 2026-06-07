@@ -1,12 +1,12 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Asynchronous REST API for scraping real estate listings from WG-Gesucht.",
+        "description": "Asynchronous REST API for scraping real estate listings from WG-Gesucht and Kleinanzeigen.",
         "title": "Immogucker API",
         "contact": {
             "name": "Roman Mishyn"
         },
-        "version": "1.0"
+        "version": "1.1"
     },
     "host": "localhost:8080",
     "basePath": "/api/v1",
@@ -54,7 +54,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_Wizzerin_immogucker-go_internal_models.TaskRequest"
+                            "$ref": "#/definitions/models.TaskRequest"
                         }
                     }
                 ],
@@ -131,12 +131,13 @@
         }
     },
     "definitions": {
-        "github_com_Wizzerin_immogucker-go_internal_models.TaskRequest": {
+        "models.TaskRequest": {
             "type": "object",
             "required": [
                 "city",
                 "email",
-                "max_price"
+                "max_price",
+                "min_price"
             ],
             "properties": {
                 "city": {
@@ -146,6 +147,9 @@
                     "type": "string"
                 },
                 "max_price": {
+                    "type": "integer"
+                },
+                "min_price": {
                     "type": "integer"
                 }
             }

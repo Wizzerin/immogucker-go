@@ -60,7 +60,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_Wizzerin_immogucker-go_internal_models.TaskRequest"
+                            "$ref": "#/definitions/models.TaskRequest"
                         }
                     }
                 ],
@@ -137,12 +137,13 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_Wizzerin_immogucker-go_internal_models.TaskRequest": {
+        "models.TaskRequest": {
             "type": "object",
             "required": [
                 "city",
                 "email",
-                "max_price"
+                "max_price",
+                "min_price"
             ],
             "properties": {
                 "city": {
@@ -153,6 +154,9 @@ const docTemplate = `{
                 },
                 "max_price": {
                     "type": "integer"
+                },
+                "min_price": {
+                    "type": "integer"
                 }
             }
         }
@@ -161,12 +165,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
+	Version:          "1.1",
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Immogucker API",
-	Description:      "Asynchronous REST API for scraping real estate listings from WG-Gesucht.",
+	Description:      "Asynchronous REST API for scraping real estate listings from WG-Gesucht and Kleinanzeigen.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

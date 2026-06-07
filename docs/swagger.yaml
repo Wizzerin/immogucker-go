@@ -1,6 +1,6 @@
 basePath: /api/v1
 definitions:
-  github_com_Wizzerin_immogucker-go_internal_models.TaskRequest:
+  models.TaskRequest:
     properties:
       city:
         type: string
@@ -8,18 +8,22 @@ definitions:
         type: string
       max_price:
         type: integer
+      min_price:
+        type: integer
     required:
     - city
     - email
     - max_price
+    - min_price
     type: object
 host: localhost:8080
 info:
   contact:
     name: Roman Mishyn
-  description: Asynchronous REST API for scraping real estate listings from WG-Gesucht.
+  description: Asynchronous REST API for scraping real estate listings from WG-Gesucht
+    and Kleinanzeigen.
   title: Immogucker API
-  version: "1.0"
+  version: "1.1"
 paths:
   /health:
     get:
@@ -48,7 +52,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_Wizzerin_immogucker-go_internal_models.TaskRequest'
+          $ref: '#/definitions/models.TaskRequest'
       produces:
       - application/json
       responses:
